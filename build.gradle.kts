@@ -14,8 +14,7 @@ repositories {
 dependencies {
     compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.4.0")
     compileOnly("org.springframework.boot:spring-boot-configuration-processor:3.4.0")
-    compileOnly("org.springframework.boot:spring-boot-starter-web:3.4.0")
-    implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
+implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
 }
 
 kotlin {
