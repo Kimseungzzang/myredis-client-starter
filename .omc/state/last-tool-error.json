@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"git remote add origin https://github.com/Kimseungzzang/myredis-client-starter.git && git push -u origin main\",\"description\":\"Add remote and push to GitHub\"}",
-  "error": "Exit code 128\nremote: Permission to Kimseungzzang/myredis-client-starter.git denied to ksjhbrc.\nfatal: unable to access 'https://github.com/Kimseungzzang/myredis-client-starter.git/': The requested URL returned error: 403",
-  "timestamp": "2026-05-27T06:07:26.384Z",
-  "retry_count": 1
-}
