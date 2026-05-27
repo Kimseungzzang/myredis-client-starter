@@ -14,7 +14,12 @@ repositories {
 dependencies {
     compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.4.0")
     compileOnly("org.springframework.boot:spring-boot-configuration-processor:3.4.0")
+    compileOnly("org.springframework.boot:spring-boot-starter-web:3.4.0")
     implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 java {
@@ -30,7 +35,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/ksjhbrc/myredis-client-starter")
+            url = uri("https://maven.pkg.github.com/Kimseungzzang/myredis-client-starter")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
