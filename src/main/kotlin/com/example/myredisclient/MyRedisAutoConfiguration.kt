@@ -11,7 +11,7 @@ class MyRedisAutoConfiguration(private val props: MyRedisProperties) {
 
     @Bean
     @ConditionalOnMissingBean
-    fun redisTokenStore(): RedisTokenStore = RedisTokenStore(
+    fun myRedisTemplate(): MyRedisTemplate = MyRedisTemplate(
         host = props.host,
         port = props.port,
         connectTimeoutMs = props.connectTimeoutMs,

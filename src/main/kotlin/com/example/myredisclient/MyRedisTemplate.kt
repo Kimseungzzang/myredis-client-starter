@@ -9,7 +9,7 @@ import java.net.Socket
 import java.util.concurrent.ArrayBlockingQueue
 import jakarta.annotation.PreDestroy
 
-class RedisTokenStore(
+class MyRedisTemplate(
     private val host: String = "localhost",
     private val port: Int = 6379,
     private val connectTimeoutMs: Int = 1000,
