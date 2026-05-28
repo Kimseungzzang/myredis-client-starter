@@ -41,12 +41,23 @@ class MyRedisTemplate(
     fun setKey(key: String, value: String, ttlSec: Long) {
         runCatching {
             if (ttlSec < 0) {
-                // TTL 없이 저장
                 sendCommandWithReconnect("SET", key, value)
             } else {
                 sendCommandWithReconnect("SET", key, value, "EX", ttlSec.toString())
             }
         }
+    }
+
+    /** NX: 키가 없을 때만 저장. 성공하면 true, 이미 존재하면 false */
+    fun setKeyNx(key: String, value: String, ttlSec: Long): Boolean {
+        val response = runCatching {
+            if (ttlSec < 0) {
+                sendCommandWithReconnect("SET", key, value, "NX")
+            } else {
+                sendCommandWithReconnect("SET", key, value, "EX", ttlSec.toString(), "NX")
+            }
+        }.getOrElse { return false }
+        return response is RespValue.SimpleString && response.value == "OK"
     }
 
     fun delKey(vararg keys: String) {
