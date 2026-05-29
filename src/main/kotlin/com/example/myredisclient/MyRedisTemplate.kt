@@ -28,9 +28,7 @@ class MyRedisTemplate(
     // ── 범용 키 조작 ──────────────────────────────────────────────────────────
 
     fun getKey(key: String): String? {
-        val response = runCatching {
-            sendCommandWithReconnect("GET", key)
-        }.getOrElse { return null }
+        val response = sendCommand("GET", key) ?: return null
         return when (response) {
             is RespValue.BulkString -> response.value
             RespValue.NullBulkString -> null
@@ -39,44 +37,35 @@ class MyRedisTemplate(
     }
 
     fun setKey(key: String, value: String, ttlSec: Long) {
-        runCatching {
-            if (ttlSec < 0) {
-                sendCommandWithReconnect("SET", key, value)
-            } else {
-                sendCommandWithReconnect("SET", key, value, "EX", ttlSec.toString())
-            }
+        if (ttlSec < 0) {
+            sendCommand("SET", key, value)
+        } else {
+            sendCommand("SET", key, value, "EX", ttlSec.toString())
         }
     }
 
     /** NX: 키가 없을 때만 저장. 성공하면 true, 이미 존재하면 false */
-    fun setKeyNx(key: String, value: String, ttlSec: Long): Boolean {
-        val response = runCatching {
-            if (ttlSec < 0) {
-                sendCommandWithReconnect("SET", key, value, "NX")
-            } else {
-                sendCommandWithReconnect("SET", key, value, "EX", ttlSec.toString(), "NX")
-            }
-        }.getOrElse { return false }
+    fun setNx(key: String, value: String, ttlSec: Long): Boolean {
+        val args = if (ttlSec < 0) {
+            arrayOf("SET", key, value, "NX")
+        } else {
+            arrayOf("SET", key, value, "EX", ttlSec.toString(), "NX")
+        }
+        val response = sendCommand(*args) ?: return false
         return response is RespValue.SimpleString && response.value == "OK"
     }
 
     fun delKey(vararg keys: String) {
-        runCatching {
-            sendCommandWithReconnect("DEL", *keys)
-        }
+        sendCommand("DEL", *keys)
     }
 
     fun incrKey(key: String): Long {
-        val response = runCatching {
-            sendCommandWithReconnect("INCR", key)
-        }.getOrElse { return 0L }
+        val response = sendCommand("INCR", key) ?: return 0L
         return (response as? RespValue.Integer)?.value ?: 0L
     }
 
     fun decrKey(key: String): Long {
-        val response = runCatching {
-            sendCommandWithReconnect("DECR", key)
-        }.getOrElse { return 0L }
+        val response = sendCommand("DECR", key) ?: return 0L
         return (response as? RespValue.Integer)?.value ?: 0L
     }
 
@@ -84,38 +73,23 @@ class MyRedisTemplate(
 
     /** member가 이미 있으면 score만 갱신, 없으면 추가 후 1 반환 */
     fun zadd(key: String, score: Long, member: String): Long {
-        val response = runCatching {
-            sendCommandWithReconnect("ZADD", key, score.toString(), member)
-        }.getOrElse { return 0L }
+        val response = sendCommand("ZADD", key, score.toString(), member) ?: return 0L
         return (response as? RespValue.Integer)?.value ?: 0L
     }
 
     /** 0-indexed 순위 반환, 없으면 null */
     fun zrank(key: String, member: String): Long? {
-        val response = runCatching {
-            sendCommandWithReconnect("ZRANK", key, member)
-        }.getOrElse { return null }
-        return when (response) {
-            is RespValue.Integer -> response.value
-            else -> null
-        }
+        val response = sendCommand("ZRANK", key, member) ?: return null
+        return (response as? RespValue.Integer)?.value
     }
 
     fun zcard(key: String): Long {
-        val response = runCatching {
-            sendCommandWithReconnect("ZCARD", key)
-        }.getOrElse { return 0L }
+        val response = sendCommand("ZCARD", key) ?: return 0L
         return (response as? RespValue.Integer)?.value ?: 0L
     }
 
     fun keysAll(): Set<String> {
-        val response = runCatching {
-            sendCommandWithReconnect("KEYS")
-        }.getOrElse { e ->
-            println("[DEBUG] keysAll 예외: ${e.message}")
-            return emptySet()
-        }
-        println("[DEBUG] keysAll 응답 타입: ${response::class.simpleName}, 값: $response")
+        val response = sendCommand("KEYS") ?: return emptySet()
         return when (response) {
             is RespValue.Array -> response.values.filterIsInstance<RespValue.BulkString>().map { it.value }.toSet()
             else -> emptySet()
@@ -123,15 +97,13 @@ class MyRedisTemplate(
     }
 
     fun type(key: String): String {
-        val response = runCatching { sendCommandWithReconnect("TYPE", key) }.getOrElse { return "none" }
+        val response = sendCommand("TYPE", key) ?: return "none"
         return (response as? RespValue.SimpleString)?.value ?: "none"
     }
 
     /** score 오름차순 전체 멤버 반환 [member, score, member, score, ...] */
     fun zrangeWithScores(key: String): List<Pair<String, String>> {
-        val response = runCatching {
-            sendCommandWithReconnect("ZRANGE", key, "0", "-1", "WITHSCORES")
-        }.getOrElse { return emptyList() }
+        val response = sendCommand("ZRANGE", key, "0", "-1", "WITHSCORES") ?: return emptyList()
         return when (response) {
             is RespValue.Array -> {
                 val items = response.values.filterIsInstance<RespValue.BulkString>().map { it.value }
@@ -142,33 +114,40 @@ class MyRedisTemplate(
     }
 
     fun ttlSec(key: String): Long {
-        val response = runCatching { sendCommandWithReconnect("TTL", key) }.getOrElse { return -2L }
+        val response = sendCommand("TTL", key) ?: return -2L
         return (response as? RespValue.Integer)?.value ?: -2L
     }
 
     /** score 낮은 순으로 count개 꺼내서 member 이름 목록 반환 */
     fun zpopmin(key: String, count: Int): List<String> {
-        val response = runCatching {
-            sendCommandWithReconnect("ZPOPMIN", key, count.toString())
-        }.getOrElse { return emptyList() }
+        val response = sendCommand("ZPOPMIN", key, count.toString()) ?: return emptyList()
         return when (response) {
             is RespValue.Array -> response.values
                 .filterIsInstance<RespValue.BulkString>()
-                .filterIndexed { index, _ -> index % 2 == 0 }  // 짝수 인덱스 = member (홀수 = score)
+                .filterIndexed { index, _ -> index % 2 == 0 }  // even index = member, odd = score
                 .map { it.value }
             else -> emptyList()
         }
     }
 
-    private fun sendCommandWithReconnect(vararg args: String): RespValue {
+    /**
+     * Sends a command and returns the response, or null on connection failure.
+     * Throws [RedisWrongTypeException] on WRONGTYPE error, [RedisException] on any other Redis error.
+     */
+    private fun sendCommand(vararg args: String): RespValue? {
         val connection = borrowConnection()
         return try {
-            runCatching {
+            val response = runCatching {
                 connection.sendCommand(args)
             }.getOrElse {
                 connection.close()
-                connection.sendCommand(args)
+                runCatching { connection.sendCommand(args) }.getOrElse { return null }
             }
+            if (response is RespValue.Error) {
+                if (response.message.startsWith("WRONGTYPE")) throw RedisWrongTypeException(response.message)
+                throw RedisException(response.message)
+            }
+            response
         } finally {
             releaseConnection(connection)
         }
