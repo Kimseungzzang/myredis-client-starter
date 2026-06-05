@@ -28,7 +28,7 @@ repositories {
 
 ```kotlin
 dependencies {
-    implementation("com.example:myredis-client-starter:1.0.2")
+    implementation("com.example:myredis-client-starter:1.0.5")
 }
 ```
 
@@ -71,6 +71,10 @@ class MyService(private val myRedisTemplate: MyRedisTemplate) {
         val value = myRedisTemplate.getKey("key")
         myRedisTemplate.delKey("key")
 
+        // Atomic set-if-absent (NX)
+        val acquired = myRedisTemplate.setNx("lock:seat:1", "user42", ttlSec = 10)
+        if (acquired) { /* lock held */ }
+
         // Counter operations
         myRedisTemplate.incrKey("counter")
         myRedisTemplate.decrKey("counter")
@@ -92,6 +96,7 @@ class MyService(private val myRedisTemplate: MyRedisTemplate) {
 |---|---|
 | `getKey(key)` | Get value by key |
 | `setKey(key, value, ttlSec)` | Set value with TTL in seconds (`-1` = no TTL) |
+| `setNx(key, value, ttlSec)` | Set value only if key does not exist; returns `true` on success |
 | `delKey(vararg keys)` | Delete one or more keys |
 | `incrKey(key)` | Atomically increment integer value |
 | `decrKey(key)` | Atomically decrement integer value |
@@ -106,8 +111,27 @@ class MyService(private val myRedisTemplate: MyRedisTemplate) {
 | `zadd(key, score, member)` | Add member with score |
 | `zrank(key, member)` | Get 0-indexed rank (ascending) |
 | `zcard(key)` | Get total member count |
-| `zpopmin(key, count)` | Pop lowest-scored members |
+| `zpopmin(key, count)` | Pop lowest-scored members; returns member names only (`List<String>`) |
 | `zrangeWithScores(key)` | Get all members with scores (ascending) |
+
+## Error Handling
+
+`MyRedisTemplate` throws the following exceptions:
+
+| Exception | When |
+|---|---|
+| `RedisWrongTypeException` | Command issued against a key holding the wrong type (e.g. `GET` on a sorted-set key) |
+| `RedisException` | Any other Redis-level error |
+
+```kotlin
+try {
+    myRedisTemplate.getKey("zset-key")  // key holds a sorted set
+} catch (e: RedisWrongTypeException) {
+    // handle type mismatch
+} catch (e: RedisException) {
+    // handle other Redis errors
+}
+```
 
 ## Customization
 
