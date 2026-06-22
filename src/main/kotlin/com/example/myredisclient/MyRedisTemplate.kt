@@ -89,7 +89,7 @@ class MyRedisTemplate(
     }
 
     fun keysAll(): Set<String> {
-        val response = sendCommand("KEYS") ?: return emptySet()
+        val response = sendCommand("KEYS", "*") ?: return emptySet()
         return when (response) {
             is RespValue.Array -> response.values.filterIsInstance<RespValue.BulkString>().map { it.value }.toSet()
             else -> emptySet()
